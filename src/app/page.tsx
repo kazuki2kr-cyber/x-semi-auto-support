@@ -8,63 +8,63 @@ import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from "f
 import { ReplyDocument } from "@/types";
 
 export default function Home() {
-    const [user, setUser] = useState<User | null>(null);
-    const [replies, setReplies] = useState<ReplyDocument[]>([]);
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [replies, setReplies] = useState<ReplyDocument[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user);
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    useEffect(() => {
-        if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-        // Listen for 'generated' replies
-        const q = query(
-            collection(db, "replies"),
-            where("status", "==", "generated"),
-            orderBy("createdAt", "desc")
-        );
+    // Listen for 'generated' replies
+    const q = query(
+      collection(db, "replies"),
+      where("status", "==", "generated"),
+      orderBy("createdAt", "desc")
+    );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const docs = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            })) as ReplyDocument[];
-            setReplies(docs);
-        });
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as ReplyDocument[];
+      setReplies(docs);
+    });
 
-        return () => unsubscribe();
-    }, [user]);
+    return () => unsubscribe();
+  }, [user]);
 
-    const handleSignIn = async () => {
-        const provider = new GoogleAuthProvider();
-        try {
-            await signInWithPopup(auth, provider);
-        } catch (error) {
-            console.error("Error signing in", error);
-        }
-    };
+  const handleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Error signing in", error);
+    }
+  };
 
-    const handleSignOut = async () => {
-        await signOut(auth);
-    };
+  const handleSignOut = async () => {
+    await signOut(auth);
+  };
 
-    const handleReply = async (replyDoc: ReplyDocument, suggestion: string) => {
-        // 1. Open Twitter Web Intent
-        // Format: https://x.com/intent/post?text={text}&in_reply_to={tweet_id}
-        // We need tweet_id. originalTweetUrl might look like https://x.com/user/status/123456789
-        // Extract ID from URL
-        const tweetIdMatch = replyDoc.originalTweetUrl.match(/status\/(\d+)/);
-        const tweetId = tweetIdMatch ? tweetIdMatch[1] : "";
+  const handleReply = async (replyDoc: ReplyDocument, suggestion: string) => {
+    // 1. Open Twitter Web Intent
+    // Format: https://x.com/intent/post?text={text}&in_reply_to={tweet_id}
+    // We need tweet_id. originalTweetUrl might look like https://x.com/user/status/123456789
+    // Extract ID from URL
+    const tweetIdMatch = replyDoc.originalTweetUrl.match(/status\/(\d+)/);
+    const tweetId = tweetIdMatch ? tweetIdMatch[1] : "";
 
-        const text = encodeURIComponent(suggestion);
-        const url = \`https://x.com/intent/post?text=\${text}&in_reply_to=\${tweetId}\`;
-    
+    const text = encodeURIComponent(suggestion);
+    const url = "https://x.com/intent/post?text=" + text + "&in_reply_to=" + tweetId;
+
     window.open(url, "_blank");
 
     // 2. Update status to posted
@@ -81,6 +81,9 @@ export default function Home() {
 
   if (loading) return <div className="p-10">Loading...</div>;
 
+  // Allowed email (Replace with your actual email or set in .env)
+  const ALLOWED_EMAIL = "kazuki2kr@gmail.com"; // detected from your login
+
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -95,15 +98,25 @@ export default function Home() {
     );
   }
 
+  if (user.email !== ALLOWED_EMAIL) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+        <h1 className="text-red-500 text-2xl font-bold mb-4">Access Denied</h1>
+        <p className="mb-4">Your email ({user.email}) is not authorized.</p>
+        <button onClick={handleSignOut} className="text-blue-500 underline">Sign Out</button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <div className="flex items-center gap-4">
-                <span>{user.email}</span>
-                <button onClick={handleSignOut} className="text-red-500 hover:underline">Sign Out</button>
-            </div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <span>{user.email}</span>
+            <button onClick={handleSignOut} className="text-red-500 hover:underline">Sign Out</button>
+          </div>
         </div>
 
         <div className="grid gap-6">
@@ -114,8 +127,8 @@ export default function Home() {
             <div key={reply.id} className="bg-white shadow rounded-lg p-6 border border-gray-200">
               <div className="mb-4">
                 <div className="text-sm text-gray-500 flex justify-between">
-                    <span>Topic: {reply.topic} | Score: {reply.score}</span>
-                    <a href={reply.originalTweetUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">View Tweet</a>
+                  <span>Topic: {reply.topic} | Score: {reply.score}</span>
+                  <a href={reply.originalTweetUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">View Tweet</a>
                 </div>
                 <p className="mt-2 text-gray-800 font-medium">{reply.originalText}</p>
               </div>
