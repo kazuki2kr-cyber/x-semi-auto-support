@@ -3,7 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      allow read, write: if true; // TODO: Change to secure rules for production
+      // Allow only if the user is signed in.
+      // For stricter security, you can check specific email:
+      // allow read, write: if request.auth != null && request.auth.token.email == "YOUR_EMAIL@example.com";
+      allow read, write: if request.auth != null;
     }
   }
 }
