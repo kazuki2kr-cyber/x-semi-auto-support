@@ -1,3 +1,5 @@
+import { ARTICLE_DATA } from "./knowledge/data_articles";
+
 export interface Article {
     title: string;
     content: string; // Summary or full text if token limit allows
@@ -6,7 +8,7 @@ export interface Article {
 
 // 知識ベース: 主要な記事や概念 (Future expansion)
 export const KNOWLEDGE_BASE: Article[] = [
-    // ユーザーから具体的な記事データが提供されたらここに追加します
+    ...ARTICLE_DATA
 ];
 
 // システムプロンプトのテンプレート

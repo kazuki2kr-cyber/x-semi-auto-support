@@ -10,13 +10,21 @@ admin.initializeApp();
 const apiKey = defineSecret("GEMINI_API_KEY");
 
 import { SYSTEM_PROMPT_TEMPLATE, KNOWLEDGE_BASE } from "./knowledge";
+import { PSYCHOLOGY_CONTEXT } from "./psychology";
 
 const SYSTEM_PROMPT = SYSTEM_PROMPT_TEMPLATE;
 
 // (Optional) Function to inject specific knowledge if needed
 const getKnowledgeContext = () => {
-  if (KNOWLEDGE_BASE.length === 0) return "";
-  return "\n\n【参照可能な知識ソース】\n" + KNOWLEDGE_BASE.map(k => `Title: ${k.title}\nContent: ${k.content}`).join("\n\n");
+  let context = "";
+
+  if (KNOWLEDGE_BASE.length > 0) {
+    context += "\n\n【参照可能な知識ソース】\n" + KNOWLEDGE_BASE.map(k => `Title: ${k.title}\nContent: ${k.content}`).join("\n\n");
+  }
+
+  context += "\n\n" + PSYCHOLOGY_CONTEXT;
+
+  return context;
 };
 
 
