@@ -1,50 +1,82 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase"; // Using client SDK for simplicity, or admin in real prod if needed
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { dbRequest } from "@/lib/firebase-admin";
 import { ReplyDocument } from "@/types";
-
-// Note: In a real production environment, you might want to use firebase-admin
-// for the API route to bypass client-side auth rules, or ensure the request is authenticated.
-// For this setup, we assume the extension calls this (maybe with a secret header or open for now).
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { originalTweetUrl, originalText, authorName, likeCount, repostCount, replyCount } = body;
+        const { originalTweetUrl, originalText, authorName, likeCount, repostCount, replyCount, tweetCreatedAt } = body;
 
         if (!originalTweetUrl || !originalText) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // Check for duplicates
-        const q = query(collection(db, "replies"), where("originalTweetUrl", "==", originalTweetUrl));
-        const snapshot = await getDocs(q);
+        // Check for duplicates using Admin SDK
+        const snapshot = await dbRequest
+            .collection("replies")
+            .where("originalTweetUrl", "==", originalTweetUrl)
+            .get();
 
         if (!snapshot.empty) {
-            return NextResponse.json({ message: "Already exists", id: snapshot.docs[0].id }, { status: 200 });
+            // Logic Change: If exists, delete the old one to allow re-creation.
+            // This ensures the Cloud Function (onDocumentCreated) triggers again with fresh data.
+            const oldDoc = snapshot.docs[0];
+            await oldDoc.ref.delete();
         }
+
+        // Safe Date Parsing
+        let tweetDate = new Date();
+        if (tweetCreatedAt) {
+            const parsed = new Date(tweetCreatedAt);
+            if (!isNaN(parsed.getTime())) {
+                tweetDate = parsed;
+            } else {
+                console.warn("Invalid tweetCreatedAt received:", tweetCreatedAt, "falling back to now.");
+            }
+        }
+
+        // Calculate Score immediately for instant UI feedback
+        // Formula: Score = min(100, (L + 3R + 5C) * 10 / (T + 15))
+        const now = new Date();
+        const diffMs = now.getTime() - tweetDate.getTime();
+        const minutesElapsed = Math.max(0, Math.floor(diffMs / 60000));
+
+        const l = likeCount || 0;
+        const r = repostCount || 0;
+        const c = replyCount || 0;
+
+        const numerator = (l + 3 * r + 5 * c) * 10;
+        const denominator = minutesElapsed + 15;
+        const score = Math.floor(numerator / denominator);
+
+        // instant rejection if low score
+        const initialStatus = score < 60 ? "rejected" : "pending";
 
         const newDoc: Partial<ReplyDocument> = {
             originalTweetUrl,
             originalText,
             authorName: authorName || "Unknown",
-            likeCount: likeCount || 0,
-            repostCount: repostCount || 0,
-            replyCount: replyCount || 0,
-            score: 0, // Will be calculated by Cloud Function
-            topic: "SaaS", // Default or calculated by CF
-            status: "pending",
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            likeCount: l,
+            repostCount: r,
+            replyCount: c,
+            score: score,
+            topic: "SaaS", // Placeholder, user requested to hide this anyway
+            status: initialStatus,
+            tweetCreatedAt: tweetDate,
+            createdAt: new Date(),
+            updatedAt: new Date(),
             suggestions: []
         };
 
-        // @ts-ignore - serverTimestamp type mismatch with client SDK types sometimes
-        const docRef = await addDoc(collection(db, "replies"), newDoc);
+        const docRef = await dbRequest.collection("replies").add(newDoc);
 
         return NextResponse.json({ message: "Created", id: docRef.id }, { status: 201 });
     } catch (error) {
         console.error("Error creating reply doc:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({
+            error: "Internal Server Error",
+            details: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+        }, { status: 500 });
     }
 }

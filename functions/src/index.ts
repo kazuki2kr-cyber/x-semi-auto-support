@@ -19,7 +19,7 @@ const getKnowledgeContext = () => {
   let context = "";
 
   if (KNOWLEDGE_BASE.length > 0) {
-    context += "\n\n【参照可能な知識ソース】\n" + KNOWLEDGE_BASE.map(k => `Title: ${k.title}\nContent: ${k.content}`).join("\n\n");
+    context += "\n\n【参照可能な知識ソース】\n" + KNOWLEDGE_BASE.map((k: { title: any; content: any; }) => `Title: ${k.title}\nContent: ${k.content}`).join("\n\n");
   }
 
   context += "\n\n" + PSYCHOLOGY_CONTEXT;
@@ -28,22 +28,14 @@ const getKnowledgeContext = () => {
 };
 
 
-const ANALYSIS_PROMPT = `
-Analyze the following X (Twitter) post.
-
-1. Classify the topic into one of: 'PoliticsEconomics', 'Stocks', 'Math', 'Education', 'IndieDev', 'SaaS'.
-2. Determine if the content is negative, critical, aggressive, or uncomfortable.
-3. Assess the "specialist" quality (0-20 points) based on whether it contains unique insights or field-specific knowledge in the identified topic.
-
-Output as JSON.
-`;
+// ANALYSIS_PROMPT removed (using combined prompt and local scoring)
 
 export const generateReplySuggestions = onDocumentCreated(
   {
     document: "replies/{docId}",
     secrets: [apiKey],
     region: "asia-northeast1",
-    timeoutSeconds: 60,
+    timeoutSeconds: 300, // Increased to 5 minutes
   },
   async (event) => {
     const snapshot = event.data;
@@ -57,74 +49,99 @@ export const generateReplySuggestions = onDocumentCreated(
     }
 
     try {
-      const genAI = new GoogleGenerativeAI(apiKey.value());
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        generationConfig: { responseMimeType: "application/json" }
-      });
+      functions.logger.info("Function triggered for doc:", event.params.docId);
 
-      // Step 1: Analyze Topic & Score
-      const analysisPrompt = `
-${ANALYSIS_PROMPT}
-
-Post Content:
-${data.originalText}
-`;
-
-      const analysisResult = await model.generateContent(analysisPrompt);
-      const analysisJson = JSON.parse(analysisResult.response.text());
-
-      const topic = analysisJson.topic as Topic;
-      const isNegative = analysisJson.isNegative || false;
-      const specialistScore = analysisJson.specialistScore || 0;
-
-      // Calculate Engagement Score
-      const rawEngagement = (data.replyCount * 75) + (data.repostCount * 20) + (data.likeCount * 1);
-      const engagementScore = Math.min(80, rawEngagement / 10);
-
-      let totalScore = engagementScore + specialistScore;
-      if (isNegative) {
-        totalScore = 0;
-      }
-
-      await snapshot.ref.update({
-        topic: topic,
-        score: Math.round(totalScore),
-      });
-
-      if (totalScore < 80) {
-        functions.logger.info(`Skipping generation. Score: ${totalScore} for ${event.params.docId}`);
+      const key = apiKey.value();
+      if (!key) {
+        functions.logger.error("GEMINI_API_KEY is missing or empty.");
         return;
       }
 
-      // Step 2: Generate Replies
-      const textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Text mode for reply
-      const replyPrompt = `
+      // --- 1. Calculate Engagement Score (Local / Zero-API) ---
+      // Formula: Score = min(100, (L + 3R + 5C) * 10 / (T + 15))
+
+      const likeCount = data.likeCount || 0;
+      const repostCount = data.repostCount || 0;
+      const replyCount = data.replyCount || 0;
+
+      // Calculate elapsed minutes (T)
+      const now = new Date();
+      // Use tweetCreatedAt if available (from scraped data), else fallback to doc creation time
+      const postedAt = data.tweetCreatedAt ? (data.tweetCreatedAt as any).toDate() : data.createdAt.toDate();
+      const diffMs = now.getTime() - postedAt.getTime();
+      const minutesElapsed = Math.max(0, Math.floor(diffMs / 60000)); // Ensure non-negative
+
+      const numerator = (likeCount + 3 * repostCount + 5 * replyCount) * 10;
+      const denominator = minutesElapsed + 15;
+
+      const calculatedScore = Math.floor(numerator / denominator);
+
+      functions.logger.info(`Score Calc: (L:${likeCount} + 3*R:${repostCount} + 5*C:${replyCount})*10 / (T:${minutesElapsed}+15) = ${calculatedScore}`);
+
+      // Apply Threshold (60)
+      if (calculatedScore < 60) {
+        functions.logger.info(`Score ${calculatedScore} < 60. Rejecting without API call.`);
+        await snapshot.ref.update({
+          score: calculatedScore,
+          status: "rejected",
+          topic: "SaaS", // Default/Placeholder since we skipped AI analysis
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+
+      // --- 2. Generate Content (1 API Call) ---
+      const genAI = new GoogleGenerativeAI(key);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-3-flash-preview",
+        generationConfig: { responseMimeType: "application/json" }
+      });
+
+      const COMBINED_PROMPT = `
 ${SYSTEM_PROMPT}
 
 ${getKnowledgeContext()}
 
+Task:
+1. Analyze the Topic of the post (Select one from: 'PoliticsEconomics', 'Stocks', 'Math', 'Education', 'IndieDev', 'SaaS').
+2. Generate exactly 2 reply suggestions as per the System Prompt:
+   - Suggestion 1: Agreeing/Sympathizing
+   - Suggestion 2: Disagreeing/Counter-point/Alternative perspective
 
 Target Post:
 ${data.originalText}
 
-Topic: ${topic}
-
-Generate 3 reply suggestions separated by "---".
+Output as JSON:
+{
+  "topic": "TopicString",
+  "suggestions": ["Agreeing Reply", "Disagreeing Reply"]
+}
 `;
 
-      const result = await textModel.generateContent(replyPrompt);
-      const text = result.response.text();
-      const suggestions = text.split("---").map(s => s.trim()).filter(s => s.length > 0).slice(0, 3);
+      functions.logger.info("Score passed. Calling Gemini (Combined Mode)...");
+      const result = await model.generateContent(COMBINED_PROMPT);
+      const response = await result.response;
+      const json = JSON.parse(response.text());
+
+      const topic = json.topic as Topic;
+      const suggestions = json.suggestions || [];
 
       await snapshot.ref.update({
+        topic: topic,
+        score: calculatedScore,
         suggestions: suggestions,
         status: "generated",
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-    } catch (error) {
+    } catch (error: any) {
       functions.logger.error("Error in generateReplySuggestions:", error);
+      if (error.response) {
+        functions.logger.error("Error Response:", error.response);
+      }
+      functions.logger.error("Error Message:", error.message);
+      functions.logger.error("Error Status:", error.status);
+      functions.logger.error("Error StatusText:", error.statusText);
     }
   }
 );

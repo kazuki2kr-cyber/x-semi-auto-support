@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
-import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, orderBy, deleteDoc } from "firebase/firestore";
 import { ReplyDocument } from "@/types";
 
 export default function Home() {
@@ -24,9 +24,11 @@ export default function Home() {
     if (!user) return;
 
     // Listen for 'generated' replies
+    // Listen for 'generated' or 'rejected' replies (and 'pending' to see live updates?)
+    // Firestore "in" query limits to 10 values.
     const q = query(
       collection(db, "replies"),
-      where("status", "==", "generated"),
+      where("status", "in", ["generated", "rejected", "pending"]),
       orderBy("createdAt", "desc")
     );
 
@@ -54,6 +56,15 @@ export default function Home() {
     await signOut(auth);
   };
 
+  const handleDelete = async (id: string) => {
+    // if (!confirm("Are you sure you want to delete this item?")) return; // Removed confirmation
+    try {
+      await deleteDoc(doc(db, "replies", id));
+    } catch (e) {
+      console.error("Error deleting document", e);
+    }
+  };
+
   const handleReply = async (replyDoc: ReplyDocument, suggestion: string) => {
     // 1. Open Twitter Web Intent
     // Format: https://x.com/intent/post?text={text}&in_reply_to={tweet_id}
@@ -65,7 +76,15 @@ export default function Home() {
     const text = encodeURIComponent(suggestion);
     const url = "https://x.com/intent/post?text=" + text + "&in_reply_to=" + tweetId;
 
-    window.open(url, "_blank");
+    const width = 600;
+    const height = 400;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    window.open(
+      url,
+      "twitter-reply",
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+    );
 
     // 2. Update status to posted
     try {
@@ -124,18 +143,35 @@ export default function Home() {
             <div className="text-center py-10 text-gray-500">No generated replies pending.</div>
           )}
           {replies.map((reply) => (
-            <div key={reply.id} className="bg-white shadow rounded-lg p-6 border border-gray-200">
-              <div className="mb-4">
+            <div key={reply.id} className="bg-white shadow rounded-lg p-6 border border-gray-200 relative">
+              <button
+                onClick={() => handleDelete(reply.id)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-red-500 p-2"
+                title="Delete"
+              >
+                🗑️
+              </button>
+              <div className="mb-4 pr-10">
                 <div className="text-sm text-gray-500 flex justify-between">
-                  <span>Topic: {reply.topic} | Score: {reply.score}</span>
-                  <a href={reply.originalTweetUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">View Tweet</a>
+                  <span>Score: {reply.score} | Status: {reply.status}</span>
+                  <a href={reply.originalTweetUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mr-8">View Tweet</a>
                 </div>
                 <p className="mt-2 text-gray-800 font-medium">{reply.originalText}</p>
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Suggestions</h3>
-                {reply.suggestions.map((suggestion, idx) => (
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+                  {reply.status === "rejected" ? "Low Score - No Suggestions" :
+                    reply.status === "pending" ? "Analyzing..." : "Suggestions"}
+                </h3>
+
+                {reply.status === "rejected" && (
+                  <div className="p-4 bg-gray-100 rounded text-gray-500 text-sm">
+                    Score ({reply.score}) did not meet the threshold (60).
+                  </div>
+                )}
+
+                {reply.suggestions && reply.suggestions.map((suggestion, idx) => (
                   <div key={idx} className="bg-gray-50 p-4 rounded border flex justify-between items-start gap-4">
                     <p className="text-gray-700 whitespace-pre-wrap flex-1">{suggestion}</p>
                     <button

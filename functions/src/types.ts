@@ -1,8 +1,8 @@
-import * as admin from 'firebase-admin';
+// import * as admin from 'firebase-admin'; // Removed unused import to fix build
 
 export type Topic = 'PoliticsEconomics' | 'Stocks' | 'Math' | 'Education' | 'IndieDev' | 'SaaS';
 
-export type ReplyStatus = 'pending' | 'generated' | 'posted';
+export type ReplyStatus = 'pending' | 'generated' | 'posted' | 'rejected';
 
 export interface ReplyDocument {
     id: string;
@@ -16,6 +16,7 @@ export interface ReplyDocument {
     replyCount: number;
     score: number;
     topic: Topic;
-    createdAt: admin.firestore.Timestamp;
-    updatedAt: admin.firestore.Timestamp;
+    tweetCreatedAt?: any; // Original Tweet Timestamp
+    createdAt: any; // Firestore Timestamp
+    updatedAt: any; // Firestore Timestamp;
 }
