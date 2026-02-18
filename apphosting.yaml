@@ -1,0 +1,4 @@
+serviceId: x-semi-auto-support
+region: us-central1
+deployment:
+    runtime: nodejs20
