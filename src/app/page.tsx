@@ -100,18 +100,18 @@ function ReplyCard({ reply, onDelete }: { reply: ReplyDocument; onDelete: (id: s
           </span>
 
           {/* Metrics */}
-          <div className="flex gap-3 text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded">
-            <span title="Views">👁️ {formatNumber(reply.views)}</span>
-            <span title="Likes">❤️ {formatNumber(reply.likeCount)}</span>
-            <span title="Reposts">🔁 {formatNumber(reply.repostCount)}</span>
-            <span title="Replies">💬 {formatNumber(reply.replyCount)}</span>
-            <span title="Elapsed Time">⏱️ {getMinutesElapsed()}</span>
+          <div className="flex gap-4 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-2 rounded">
+            <span title="Views">Views: {formatNumber(reply.views)}</span>
+            <span title="Likes">Likes: {formatNumber(reply.likeCount)}</span>
+            <span title="Reposts">Reposts: {formatNumber(reply.repostCount)}</span>
+            <span title="Replies">Replies: {formatNumber(reply.replyCount)}</span>
+            <span title="Elapsed Time">Elapsed: {getMinutesElapsed()}</span>
           </div>
 
           {/* Model Info */}
           {(reply.usedModel || reply.usedKeyIndex) && (
             <span className="text-xs bg-blue-50 text-blue-800 px-2 py-0.5 rounded border border-blue-100 hidden sm:inline-block">
-              {reply.usedModel}
+              {reply.usedModel} {reply.usedKeyIndex ? `(Key #${reply.usedKeyIndex})` : ''}
             </span>
           )}
         </div>

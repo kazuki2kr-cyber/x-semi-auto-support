@@ -5,7 +5,7 @@ import { ReplyDocument } from "@/types";
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { originalTweetUrl, originalText, authorName, likeCount, repostCount, replyCount, tweetCreatedAt } = body;
+        const { originalTweetUrl, originalText, authorName, likeCount, repostCount, replyCount, viewCount, quotedText, tweetCreatedAt } = body;
 
         if (!originalTweetUrl || !originalText) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         }
 
         // Calculate Score immediately for instant UI feedback
-        // Formula: Score = min(100, (L + 3R + 5C) * 10 / (T + 15))
+        // Formula: Score = min(100, (L + 3R + 5C + V/100) * 10 / (T + 10))
         const now = new Date();
         const diffMs = now.getTime() - tweetDate.getTime();
         const minutesElapsed = Math.max(0, Math.floor(diffMs / 60000));
@@ -44,9 +44,10 @@ export async function POST(request: Request) {
         const l = likeCount || 0;
         const r = repostCount || 0;
         const c = replyCount || 0;
+        const v = viewCount || 0;
 
-        const numerator = (l + 3 * r + 5 * c) * 10;
-        const denominator = minutesElapsed + 15;
+        const numerator = (l + 3 * r + 5 * c + (v / 100)) * 10;
+        const denominator = minutesElapsed + 10;
 
         let score = Math.floor(numerator / denominator);
 
@@ -64,6 +65,8 @@ export async function POST(request: Request) {
             likeCount: l,
             repostCount: r,
             replyCount: c,
+            views: v,
+            quotedText: quotedText || "",
             score: score,
             topic: "SaaS", // Placeholder, user requested to hide this anyway
             status: initialStatus,
