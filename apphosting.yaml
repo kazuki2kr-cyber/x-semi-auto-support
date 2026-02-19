@@ -2,16 +2,16 @@ serviceId: x-semi-auto-support
 region: us-central1
 deployment:
     runtime: nodejs20
-# env:
-#     - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-#       value: ... (Managed in Firebase Console)
-#     - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-#       value: ...
-#     - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-#       value: ...
-#     - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-#       value: ...
-#     - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-#       value: ...
-#     - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-#       value: ...
+env:
+    - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+      value: AIzaSyC2k2YDD2dSmcLU9MkAPddptTHKRi1WRsY
+    - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+      value: x-semi-auto-support.firebaseapp.com
+    - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+      value: x-semi-auto-support
+    - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+      value: x-semi-auto-support.firebasestorage.app
+    - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+      value: 689680980364
+    - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+      value: 1:689680980364:web:75c085894099ba063ddea9
