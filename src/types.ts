@@ -4,17 +4,20 @@ export type ReplyStatus = 'pending' | 'generated' | 'posted' | 'rejected';
 
 export interface ReplyDocument {
     id: string;
-    originalTweetUrl: string;
     originalText: string;
-    authorName: string;
-    suggestions: string[];
-    status: ReplyStatus;
-    likeCount: number;
-    repostCount: number;
-    replyCount: number;
+    originalTweetUrl: string;
     score: number;
-    topic: Topic;
-    tweetCreatedAt?: any; // Original Tweet Timestamp
-    createdAt: any; // Firestore Timestamp
-    updatedAt: any; // Firestore Timestamp
+    status: "pending" | "generated" | "posted" | "rejected" | "error";
+    replies?: string[];
+    topic?: Topic;
+    suggestions?: string[];
+    usedModel?: string;
+    usedKeyIndex?: number;
+    errorMessage?: string;
+    createdAt: any; // Client side returns simpler objects or Timestamp
+    updatedAt?: any;
+    tweetCreatedAt?: any;
+    likeCount?: number;
+    repostCount?: number;
+    replyCount?: number;
 }

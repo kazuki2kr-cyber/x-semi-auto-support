@@ -55,7 +55,6 @@ export async function POST(request: Request) {
         const newDoc: Partial<ReplyDocument> = {
             originalTweetUrl,
             originalText,
-            authorName: authorName || "Unknown",
             likeCount: l,
             repostCount: r,
             replyCount: c,

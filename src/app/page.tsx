@@ -28,7 +28,7 @@ export default function Home() {
     // Firestore "in" query limits to 10 values.
     const q = query(
       collection(db, "replies"),
-      where("status", "in", ["generated", "rejected", "pending"]),
+      where("status", "in", ["generated", "rejected", "pending", "error"]),
       orderBy("createdAt", "desc")
     );
 
@@ -143,7 +143,7 @@ export default function Home() {
             <div className="text-center py-10 text-gray-500">No generated replies pending.</div>
           )}
           {replies.map((reply) => (
-            <div key={reply.id} className="bg-white shadow rounded-lg p-6 border border-gray-200 relative">
+            <div key={reply.id} className={`bg-white shadow rounded-lg p-6 border ${reply.status === 'error' ? 'border-red-500 bg-red-50' : 'border-gray-200'} relative`}>
               <button
                 onClick={() => handleDelete(reply.id)}
                 className="absolute top-4 right-4 text-gray-400 hover:text-red-500 p-2"
@@ -152,9 +152,29 @@ export default function Home() {
                 🗑️
               </button>
               <div className="mb-4 pr-10">
-                <div className="text-sm text-gray-500 flex justify-between">
-                  <span>Score: {reply.score} | Status: {reply.status}</span>
-                  <a href={reply.originalTweetUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mr-8">View Tweet</a>
+                <div className="text-sm text-gray-500 flex justify-between flex-wrap gap-2">
+                  <span className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${reply.score >= 200 ? 'bg-green-100 text-green-800' :
+                      reply.score >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                      Score: {reply.score}
+                    </span>
+                    <span className={`uppercase font-semibold text-xs ${reply.status === 'generated' ? 'text-green-600' :
+                      reply.status === 'error' ? 'text-red-600' :
+                        reply.status === 'rejected' ? 'text-gray-400' : 'text-blue-500'
+                      }`}>
+                      {reply.status}
+                    </span>
+                  </span>
+
+                  {/* Model & Key Info Display */}
+                  {(reply.usedModel || reply.usedKeyIndex) && (
+                    <span className="text-xs bg-blue-50 text-blue-800 px-2 py-0.5 rounded border border-blue-100">
+                      Model: {reply.usedModel || 'Unknown'} {reply.usedKeyIndex ? `(Key #${reply.usedKeyIndex})` : ''}
+                    </span>
+                  )}
+
+                  <a href={reply.originalTweetUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">View Tweet</a>
                 </div>
                 <p className="mt-2 text-gray-800 font-medium">{reply.originalText}</p>
               </div>
@@ -162,12 +182,19 @@ export default function Home() {
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
                   {reply.status === "rejected" ? "Low Score - No Suggestions" :
-                    reply.status === "pending" ? "Analyzing..." : "Suggestions"}
+                    reply.status === "error" ? "Generation Failed" :
+                      reply.status === "pending" ? "Analyzing..." : "Suggestions"}
                 </h3>
 
                 {reply.status === "rejected" && (
                   <div className="p-4 bg-gray-100 rounded text-gray-500 text-sm">
-                    Score ({reply.score}) did not meet the threshold (60).
+                    Score ({reply.score}) did not meet the threshold (200).
+                  </div>
+                )}
+
+                {reply.status === "error" && (
+                  <div className="p-4 bg-red-100 rounded text-red-700 text-sm border border-red-200">
+                    <strong>Error:</strong> {reply.errorMessage || "Unknown error occurred during generation."}
                   </div>
                 )}
 

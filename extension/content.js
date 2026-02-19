@@ -121,7 +121,8 @@ async function handleSparkClick(article, btn) {
 
         // Send to API
         // NOTE: Allow user to configure this URL in popup later. Default to localhost for dev.
-        const API_URL = 'http://localhost:3000/api/replies';
+        // const API_URL = 'http://localhost:3000/api/replies';
+        const API_URL = 'https://x-semi-auto-support--x-semi-auto-support.asia-east1.hosted.app/api/replies';
 
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -336,7 +337,8 @@ async function scanTimeline() {
         article.style.border = "3px solid #1d9bf0"; // Highlight selected
 
         // Send to API
-        const API_URL = 'http://localhost:3000/api/replies';
+        // const API_URL = 'http://localhost:3000/api/replies';
+        const API_URL = 'https://x-semi-auto-support--x-semi-auto-support.asia-east1.hosted.app/api/replies';
         try {
             await fetch(API_URL, {
                 method: 'POST',
