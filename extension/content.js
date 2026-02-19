@@ -230,9 +230,9 @@ async function scanTimeline() {
         btn.disabled = true;
     }
 
-    const TARGET_COUNT = 50; // Target number of unique tweets to scan
-    const MAX_SCROLL_ATTEMPTS = 100; // Safety break (allow more retries to reach 50)
-    const SCROLL_DELAY = 1500; // Time to wait after scrolling for content to load
+    const TARGET_COUNT = 30; // Increased to 30 as requested
+    const MAX_SCROLL_ATTEMPTS = 50;
+    const SCROLL_DELAY = 800; // Reduced from 1500 to 800 (text renders fast)
 
     const uniqueMap = new Map(); // Store detailed candidates by URL to deduplicate
     let scrollAttempts = 0;

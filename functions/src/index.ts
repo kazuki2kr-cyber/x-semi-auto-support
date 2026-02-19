@@ -100,7 +100,7 @@ export const generateReplySuggestions = onDocumentCreated(
 
       // Support multiple keys separated by comma
       const keys = keyString.split(",").map(k => k.trim()).filter(k => k);
-      const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"]; // Updated to newer models if available, or keep existing
+      const modelsToTry = ["gemini-3-flash-preview", "gemini-2.5-flash"]; // Reverted to user's previous custom setting
 
       let generatedText = "";
       let usedModel = "";
