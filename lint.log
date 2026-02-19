@@ -1,0 +1,75 @@
+﻿
+> next-app@0.1.0 lint
+> eslint
+
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\extension\content.js
+   73:38  warning  'type' is defined but never used                  @typescript-eslint/no-unused-vars
+  204:10  warning  'calculateScore' is defined but never used        @typescript-eslint/no-unused-vars
+  402:15  warning  'timeElement' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  413:18  warning  'e' is defined but never used                     @typescript-eslint/no-unused-vars
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\functions\check_key.js
+  1:15  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\functions\lib\index.js
+   4:19  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   5:15  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   6:21  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   7:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   8:18  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  11:21  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  12:22  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\functions\lib\knowledge.js
+  4:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\functions\src\index.ts
+   22:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   22:85  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:70  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\functions\tools\generate_articles.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  2:14  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\src\app\api\replies\route.ts
+  8:49  warning  'authorName' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\src\app\page.tsx
+   13:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\src\app\page.tsx:13:5
+  11 |   // Sync state if props change (though typically they won't for the same ID)
+  12 |   useEffect(() => {
+> 13 |     setEditedSuggestions(reply.suggestions || []);
+     |     ^^^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  14 |   }, [reply.suggestions]);
+  15 |
+  16 |   const handleSuggestionChange = (index: number, val: string) => {  react-hooks/set-state-in-effect
+   71:45  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+   71:84  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+   74:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  302:65  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react/no-unescaped-entities
+  302:76  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react/no-unescaped-entities
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\src\lib\firebase-admin.ts
+   6:15  warning  'serviceAccountPath' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  11:26  error    A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+  12:24  error    A `require()` style import is forbidden                  @typescript-eslint/no-require-imports
+
+C:\Users\ichikawa\Desktop\X-Semi-Auto-Support\src\types.ts
+  17:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  18:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  19:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+笨・33 problems (26 errors, 7 warnings)
+

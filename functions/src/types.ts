@@ -22,4 +22,6 @@ export interface ReplyDocument {
     likeCount?: number;
     repostCount?: number;
     replyCount?: number;
+    views?: number;
+    quotedText?: string;
 }

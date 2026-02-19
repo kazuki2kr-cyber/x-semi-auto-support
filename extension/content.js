@@ -255,12 +255,27 @@ async function scanTimeline() {
         let repostElement = article.querySelector('[data-testid="retweet"]') || article.querySelector('[data-testid="unretweet"]');
         let replyElement = article.querySelector('[data-testid="reply"]');
 
+        // New: Views Element (Usually aria-label="N Views")
+        // It's often inside a link with href ending in /analytics, or just text with "Views"
+        // Strategy: Look for specific aria-label pattern or data-testid="app-text-transition-container" descendant
+        // Simple approach: Look for aria-label containing "View" or "Tieng View" (multilingual support hard, assume English/Japanese for now)
+        // Actually, X UI structure is complex. Let's look for known structure or try to find by aria-label regex.
+        // Better: look for the analytics link `[href$="/analytics"]`
+        const analyticsLink = article.querySelector('a[href$="/analytics"]');
+        let viewsElement = analyticsLink ? analyticsLink : null;
+
+        // If not found, sometimes it's just a div group. Let's try to find by Icon path if needed, but analytics link is most reliable for stats.
+
         if (actionBar && (!likeElement || !repostElement)) {
             const buttons = actionBar.querySelectorAll('[role="button"]');
             if (buttons.length >= 3) {
                 if (!replyElement) replyElement = buttons[0];
                 if (!repostElement) repostElement = buttons[1];
                 if (!likeElement) likeElement = buttons[2];
+                // Views often 4th item if present
+                if (!viewsElement && buttons.length >= 4) {
+                    viewsElement = buttons[3];
+                }
             }
         }
 
@@ -287,17 +302,52 @@ async function scanTimeline() {
         const metrics = {
             likeCount: parseCount(likeElement),
             repostCount: parseCount(repostElement),
-            replyCount: parseCount(replyElement)
+            replyCount: parseCount(replyElement),
+            viewCount: parseCount(viewsElement) // New field
         };
 
-        const score = calculateScore(metrics, tweetCreatedAt);
+        // Filter: Reply Count > 20 -> Skip (Red Ocean)
+        if (metrics.replyCount >= 20) {
+            // console.log(`[Spark] Skipping active discussion (Replies: ${metrics.replyCount})`);
+            return null;
+        }
+
+        // Quoted Tweet Extraction
+        // Look for div[role="link"] or similar structure that represents quoted tweet
+        // Usually it has specific class or just distinct text container. 
+        // We can look for `div[data-testid="tweetText"]` - if there are 2, the second one is usually the quoted one?
+        // Or if the main tweet is a quote, the *first* tweetText might be the user's text, and *second* is quoted.
+        // Let's grab all text elements.
+        const textElements = article.querySelectorAll('[data-testid="tweetText"]');
+        let quotedText = "";
+
+        if (textElements.length >= 2) {
+            // 2nd one is likely the quoted text
+            quotedText = textElements[1].innerText;
+        }
+
+        // Updated Score Calculation
+        // Score = (Like + Repost * 2 + Reply * 3 + (Views / 100)) / (MinutesElapsed + 10)
+        // Re-implement calculation inline to use new metrics
+        const now = new Date();
+        const postedAt = new Date(tweetCreatedAt);
+        const diffMs = now.getTime() - postedAt.getTime();
+        const minutesElapsed = Math.max(0, Math.floor(diffMs / 60000));
+
+        if (minutesElapsed > 120) return null; // Keep 2h limit
+
+        const numerator = (metrics.likeCount + 3 * metrics.repostCount + 5 * metrics.replyCount + (metrics.viewCount / 100)) * 10;
+        const denominator = minutesElapsed + 10; // Changed from 15 to 10 to boost recent posts slightly more
+
+        const score = Math.floor(numerator / denominator);
 
         return {
-            article, // Note: DOM reference might become stale, but data is safe
+            article,
             score,
             metrics,
             tweetCreatedAt,
-            originalTweetUrl
+            originalTweetUrl,
+            quotedText // Store for API
         };
     };
 
@@ -373,6 +423,7 @@ async function scanTimeline() {
                     originalText,
                     authorName,
                     tweetCreatedAt: item.tweetCreatedAt,
+                    quotedText: item.quotedText,
                     ...item.metrics
                 })
             });

@@ -63,6 +63,7 @@ export const generateReplySuggestions = onDocumentCreated(
       const likeCount = data.likeCount || 0;
       const repostCount = data.repostCount || 0;
       const replyCount = data.replyCount || 0;
+      const viewCount = data.views || 0;
 
       // Calculate elapsed minutes (T)
       const now = new Date();
@@ -71,12 +72,12 @@ export const generateReplySuggestions = onDocumentCreated(
       const diffMs = now.getTime() - postedAt.getTime();
       const minutesElapsed = Math.max(0, Math.floor(diffMs / 60000)); // Ensure non-negative
 
-      const numerator = (likeCount + 3 * repostCount + 5 * replyCount) * 10;
-      const denominator = minutesElapsed + 15;
+      const numerator = (likeCount + 3 * repostCount + 5 * replyCount + (viewCount / 100)) * 10;
+      const denominator = minutesElapsed + 10; // Match extension logic
 
       const calculatedScore = Math.floor(numerator / denominator);
 
-      functions.logger.info(`Score Calc: (L:${likeCount} + 3*R:${repostCount} + 5*C:${replyCount})*10 / (T:${minutesElapsed}+15) = ${calculatedScore}`);
+      functions.logger.info(`Score Calc: (L:${likeCount} + 3*R:${repostCount} + 5*C:${replyCount} + V/100:${viewCount / 100})*10 / (T:${minutesElapsed}+10) = ${calculatedScore}`);
 
       // Apply Threshold (200) - Increased to save quota
       if (calculatedScore < 200) {
@@ -99,38 +100,56 @@ export const generateReplySuggestions = onDocumentCreated(
 
       // Support multiple keys separated by comma
       const keys = keyString.split(",").map(k => k.trim()).filter(k => k);
-      const modelsToTry = ["gemini-3-flash-preview", "gemini-2.5-flash"];
+      const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"]; // Updated to newer models if available, or keep existing
 
       let generatedText = "";
       let usedModel = "";
       let usedKeyIndex = -1;
 
       // Prepare Prompt
+      const viewsContext = data.views ? `Views: ${data.views}` : "";
+      const quotedContext = data.quotedText ? `\nCited Post (Quoted Tweet):\n"${data.quotedText}"\n\nUser's Comment on Cited Post:\n` : "";
+
       const COMBINED_PROMPT = `
 ${SYSTEM_PROMPT}
 
 ${getKnowledgeContext()}
 
+Target Post Info:
+${viewsContext}
+${quotedContext}
+${data.originalText}
+
 Task:
 1. Analyze the Topic of the post (Select one from: 'PoliticsEconomics', 'Stocks', 'Math', 'Education', 'IndieDev', 'SaaS').
-2. Generate exactly 2 reply suggestions as per the System Prompt:
-   - Suggestion 1: Agreeing/Sympathizing
-   - Suggestion 2: Disagreeing/Counter-point/Alternative perspective
+2. Generate exactly 3 reply strategies as follows:
 
-Target Post:
-${data.originalText}
+   - **Agree**: 
+     - Persona: "Yamato Kawakami" (Professional, Intellectual, "Irreplaceable Individual").
+     - Tone: Polite but firm, assertive yet empathetic. Use phrases like "～と考えます", "～とも解釈できそうですね".
+     - Content: Sympathize with the user's view, validate their point, and add a brief abstract insight.
+
+   - **Question**:
+     - Goal: Trigger a reply from the user (Reciprocity/Windsor Effect).
+     - Technique: Ask a simple "Yes/No" question or a specific open-ended question related to the topic.
+     - Content: Briefly agree, then ask the question. "Keep it simple" is key.
+
+   - **Witty**:
+     - Goal: Build rapport through humor or wit (Zajonc Effect/Caligula Effect).
+     - Tone: Slightly more casual, maybe a bit ironic or playful, but still fully respectful.
+     - Content: A clever observation, a "too true" remark, or a playful counter-perspective.
+   
+   Constraint: Each reply should be under 140 characters.
 
 Output as JSON:
 {
   "topic": "TopicString",
-  "suggestions": ["Agreeing Reply", "Disagreeing Reply"]
+  "suggestions": ["Agree text", "Question text", "Witty text"]
 }
 `;
 
       // Loop Priority: Try preferred model with all keys, then fallback model with all keys?
-      // Or: Try Key 1 (Model A -> Model B), then Key 2 (Model A -> Model B)?
       // Strategy: Try Model A with Key 1, then Key 2. If all fail, try Model B with Key 1, then Key 2.
-      // This prioritizes the "Better Model".
 
       outerLoop:
       for (const modelName of modelsToTry) {
