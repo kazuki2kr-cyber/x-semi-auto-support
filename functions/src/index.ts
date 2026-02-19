@@ -181,7 +181,7 @@ Output as JSON:
 
       const json = JSON.parse(generatedText);
 
-      const topic = json.topic as Topic;
+      const topic = (json.topic || "SaaS") as Topic;
       const suggestions = json.suggestions || [];
 
       functions.logger.info(`Final Selection: Model=${usedModel}, KeyIndex=${usedKeyIndex}`);

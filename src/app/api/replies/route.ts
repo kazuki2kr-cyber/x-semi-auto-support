@@ -47,7 +47,13 @@ export async function POST(request: Request) {
 
         const numerator = (l + 3 * r + 5 * c) * 10;
         const denominator = minutesElapsed + 15;
-        const score = Math.floor(numerator / denominator);
+
+        let score = Math.floor(numerator / denominator);
+
+        // Force score to 0 if older than 120 minutes (2 hours)
+        if (minutesElapsed > 120) {
+            score = 0;
+        }
 
         // instant rejection if low score
         const initialStatus = score < 60 ? "rejected" : "pending";
