@@ -79,9 +79,9 @@ export const generateReplySuggestions = onDocumentCreated(
 
       functions.logger.info(`Score Calc: (L:${likeCount} + 3*R:${repostCount} + 5*C:${replyCount} + V/100:${viewCount / 100})*10 / (T:${minutesElapsed}+10) = ${calculatedScore}`);
 
-      // Apply Threshold (200) - Increased to save quota
-      if (calculatedScore < 200) {
-        functions.logger.info(`Score ${calculatedScore} < 200. Rejecting without API call.`);
+      // Apply Threshold (60) - Lowered as requested
+      if (calculatedScore < 60) {
+        functions.logger.info(`Score ${calculatedScore} < 60. Rejecting without API call.`);
         await snapshot.ref.update({
           score: calculatedScore,
           status: "rejected",

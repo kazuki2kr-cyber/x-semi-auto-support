@@ -231,8 +231,8 @@ async function scanTimeline() {
     }
 
     const TARGET_COUNT = 30; // Increased to 30 as requested
-    const MAX_SCROLL_ATTEMPTS = 50;
-    const SCROLL_DELAY = 800; // Reduced from 1500 to 800 (text renders fast)
+    const MAX_SCROLL_ATTEMPTS = 300; // Increased from 50 to 300 to ensure we reach target
+    // const SCROLL_DELAY = 800; // Removed fixed delay
 
     const uniqueMap = new Map(); // Store detailed candidates by URL to deduplicate
     let scrollAttempts = 0;
@@ -370,7 +370,11 @@ async function scanTimeline() {
 
         // Scroll down
         window.scrollBy(0, window.innerHeight * 0.8);
-        await new Promise(r => setTimeout(r, SCROLL_DELAY));
+
+        // Random Delay between 500ms and 1200ms
+        const randomDelay = Math.floor(Math.random() * (1200 - 500 + 1)) + 500;
+        await new Promise(r => setTimeout(r, randomDelay));
+
         scrollAttempts++;
     }
 
