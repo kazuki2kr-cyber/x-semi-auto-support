@@ -198,10 +198,15 @@ Output as JSON:
       // Clean up Markdown code blocks if present
       generatedText = generatedText.replace(/```json/g, "").replace(/```/g, "").trim();
 
+      functions.logger.info("Raw Generated Text:", generatedText);
       const json = JSON.parse(generatedText);
 
       const topic = (json.topic || "SaaS") as Topic;
       const suggestions = json.suggestions || [];
+
+      if (!suggestions || suggestions.length === 0) {
+        throw new Error("AI returned empty suggestions list.");
+      }
 
       functions.logger.info(`Final Selection: Model=${usedModel}, KeyIndex=${usedKeyIndex}`);
 
@@ -217,12 +222,17 @@ Output as JSON:
 
     } catch (error: any) {
       functions.logger.error("Error in generateReplySuggestions:", error);
-      if (error.response) {
-        functions.logger.error("Error Response:", error.response);
+
+      // Update Firestore with error status if not already updated in outer loop
+      const docSnap = await snapshot.ref.get();
+      const currentData = docSnap.data();
+      if (currentData && currentData.status !== "error") {
+        await snapshot.ref.update({
+          status: "error",
+          errorMessage: error.message || "Unknown error in final processing",
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
       }
-      functions.logger.error("Error Message:", error.message);
-      functions.logger.error("Error Status:", error.status);
-      functions.logger.error("Error StatusText:", error.statusText);
     }
   }
 );
